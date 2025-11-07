@@ -1,5 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proyecto Cardio - Pago</title>
+  <style>
+    body {
+      background: #0a0a0a;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      gap: 20px;
+    }
 
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Proyecto Cardio</title>
-<style>
-body { background:#0a0a0a; color:white; font-family: Inter, sans-serif; display:flex; justify-content:center; align-items:center; height:100vh;}
-</style></head><body><h1>Proyecto Cardio</h1></body></html>
+    button {
+      padding: 14px 24px;
+      font-size: 18px;
+      background: #5562ea;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>Proyecto Cardio</h1>
+
+  <button id="payButton">Ir a pagar</button>
+
+  <script>
+    document.getElementById("payButton").addEventListener("click", async () => {
+      const res = await fetch("/api/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          priceId: "price_1SQlFcLTugNEI3XOZ7jdy5bS",  // <-- aquí va tu precio de Stripe
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.url) {
+        window.location = data.url;
+      } else {
+        alert("Error creando sesión de pago");
+      }
+    });
+  </script>
+</body>
+</html>
