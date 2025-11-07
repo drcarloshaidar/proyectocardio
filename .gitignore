@@ -1,0 +1,3 @@
+# Ignorar archivos del sistema
+.DS_Store
+Add .gitignore
