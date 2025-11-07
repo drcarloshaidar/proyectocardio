@@ -1,56 +1,168 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Proyecto Cardio - Pago</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Proyecto Cardio</title>
   <style>
-    body {
-      background: #0a0a0a;
-      color: white;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      gap: 20px;
-    }
-
-    button {
-      padding: 14px 24px;
-      font-size: 18px;
-      background: #5562ea;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      color: white;
-    }
+    :root{--bg:#0a0a0a;--card:#111;--accent:#6b5bff;--accent-2:#ff6b5b;color:white}
+    html,body{height:100%;margin:0;background:var(--bg);font-family:Inter,system-ui,Arial,sans-serif}
+    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:40px;box-sizing:border-box}
+    .hero{display:flex;gap:40px;align-items:center;width:100%;max-width:1100px}
+    .title{flex:1}
+    h1{font-size:64px;margin:0 0 12px}
+    .cta-btn{display:inline-block;background:var(--accent);color:#fff;padding:14px 22px;border-radius:10px;text-decoration:none;font-weight:600;border:none;cursor:pointer}
+    /* modal */
+    .modal-back{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:flex-end;padding:30px;box-sizing:border-box}
+    .modal{width:420px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:24px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,0.6)}
+    .modal h2{margin:0 0 10px}
+    .input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:white;box-sizing:border-box}
+    .err{color: #ffb3b3;margin-top:10px;font-size:14px}
+    .hidden{display:none}
+    /* responsive */
+    @media(max-width:800px){.hero{flex-direction:column;text-align:center}.modal{width:100%;max-width:420px}}
   </style>
 </head>
 <body>
-  <h1>Proyecto Cardio</h1>
+  <div class="wrap">
+    <div class="hero">
+      <div class="title">
+        <h1>Proyecto Cardio</h1>
+        <p style="opacity:.8">Acceso privado y tienda integrada.</p>
+        <div style="margin-top:26px">
+          <button id="payBtn" class="cta-btn">Ir a pagar</button>
+        </div>
+      </div>
 
-  <button id="payButton">Ir a pagar</button>
+      <!-- El modal de acceso privado -->
+      <div id="modalWrap" class="modal-back hidden" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true">
+          <h2>Acceso privado</h2>
+          <p style="opacity:.8">Introduce la contraseña para entrar a la biblioteca y poder comprar.</p>
+          <input id="pwd" class="input" placeholder="Introduce la contraseña" type="password" />
+          <div style="margin-top:12px">
+            <button id="enterBtn" class="cta-btn">Entrar</button>
+          </div>
+          <div id="err" class="err hidden"></div>
+        </div>
+      </div>
 
-  <script>
-    document.getElementById("payButton").addEventListener("click", async () => {
-      const res = await fetch("/api/create-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          priceId: "price_1SQlFcLTugNEI3XOZ7jdy5bS",  // <-- aquí va tu precio de Stripe
-        }),
+    </div>
+  </div>
+
+<script>
+(async function(){
+  const modal = document.getElementById('modalWrap');
+  const enterBtn = document.getElementById('enterBtn');
+  const pwdInput = document.getElementById('pwd');
+  const errEl = document.getElementById('err');
+  const payBtn = document.getElementById('payBtn');
+
+  const AUTH_KEY = 'pc_auth_ok_v1'; // clave en localStorage
+
+  function showModal(show){
+    if(show){ modal.classList.remove('hidden'); modal.setAttribute('aria-hidden','false'); }
+    else { modal.classList.add('hidden'); modal.setAttribute('aria-hidden','true'); }
+  }
+
+  function setError(msg){
+    if(!msg){ errEl.classList.add('hidden'); errEl.textContent=''; }
+    else { errEl.classList.remove('hidden'); errEl.textContent = msg; }
+  }
+
+  // Comprueba si ya autenticó
+  const already = localStorage.getItem(AUTH_KEY);
+  if(!already){
+    showModal(true);
+  } else {
+    showModal(false);
+  }
+
+  // función para autenticar password
+  async function doAuth(password){
+    setError('');
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+      if(res.ok && data.ok){
+        localStorage.setItem(AUTH_KEY, '1');
+        showModal(false);
+        return true;
+      } else {
+        setError(data.error || 'Contraseña incorrecta');
+        return false;
+      }
+    } catch(e){
+      setError('Error de conexión');
+      return false;
+    }
+  }
+
+  enterBtn.addEventListener('click', async () => {
+    const v = (pwdInput.value || '').trim();
+    if(!v){ setError('Introduce la contraseña'); return; }
+    enterBtn.disabled = true;
+    await doAuth(v);
+    enterBtn.disabled = false;
+  });
+
+  pwdInput.addEventListener('keydown', async (e) => {
+    if(e.key === 'Enter'){ enterBtn.click(); }
+  });
+
+  // -------------------------
+  // Checkout flow (usa tu endpoint /api/create-checkout)
+  // -------------------------
+  payBtn.addEventListener('click', async () => {
+    // si no autenticó, abrir modal
+    if(!localStorage.getItem(AUTH_KEY)){
+      showModal(true);
+      setError('');
+      return;
+    }
+
+    try {
+      // aquí envía priceId o productId según tu implementación
+      // reemplaza "price_1SQlFcLTugNEI3XOZ7jdy5bS" por el id real si quieres fijarlo
+      const payload = { priceId: 'price_reemplaza_con_tu_priceId' }; // <- cambia si usas productId
+      const res = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
-
-      if (data.url) {
-        window.location = data.url;
+      if(!res.ok) throw new Error(data.error || 'Error creando sesión');
+      // si tu endpoint retorna { url } redirige ahí; si retorna id, usa stripe.redirectToCheckout
+      if(data.url){
+        window.location.href = data.url;
+      } else if (data.id) {
+        // si usas stripe.js en cliente con publishable key, podrías redirigir con Stripe.js:
+        // const stripe = Stripe('pk_live_...'); stripe.redirectToCheckout({ sessionId: data.id });
+        // Para evitar exponer pk aquí, tu endpoint puede devolver url y ya está.
+        alert('Checkout creado. Redirigiendo...');
       } else {
-        alert("Error creando sesión de pago");
+        throw new Error('Respuesta inesperada del servidor');
       }
-    });
-  </script>
+
+    } catch (err) {
+      alert(err.message || 'Error al iniciar compra');
+      console.error(err);
+    }
+  });
+
+  // si quieres, puedes ocultar el botón hasta autenticación:
+  function refreshUI(){
+    if(localStorage.getItem(AUTH_KEY)){ payBtn.style.display = 'inline-block'; }
+    else payBtn.style.display = 'inline-block'; // si quieres ocultarlo: 'none'
+  }
+  refreshUI();
+
+})();
+</script>
 </body>
 </html>
