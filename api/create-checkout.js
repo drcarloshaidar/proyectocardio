@@ -1,0 +1,1 @@
+// placeholder stripe create checkout
